@@ -1,5 +1,0 @@
-configcalc list of requirements
-
-config files in toml
-can merge configs with priority handling
-can reuse variables defined in other parts of the config after merging, to make calculations inline or with a python function defined in a specific file or any math package function
