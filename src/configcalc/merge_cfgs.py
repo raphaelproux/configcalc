@@ -1,6 +1,7 @@
 from typing import Any
 from functools import reduce
 
+
 def merge_dict(dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
     """from https://stackoverflow.com/a/58742155"""
     for key, val in dict1.items():
@@ -17,5 +18,6 @@ def merge_dict(dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
 
     return dict1
 
-def merge_configs(*configs: dict[str, Any]):
+
+def merge_configs(*configs: dict[str, Any]) -> None:
     reduce(merge_dict, configs)
