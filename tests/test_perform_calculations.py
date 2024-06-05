@@ -24,7 +24,10 @@ def operand_parser():
 
 def test_perform_calculations(config, operand_parser):
     calculated_config = perform_calculations(
-        config=config, operand_parser=operand_parser, parse_float=Decimal
+        config=config,
+        context_variables={"_input_parts": 25},
+        operand_parser=operand_parser,
+        parse_float=Decimal,
     )
     should_be = {
         "title": "TOML Example",

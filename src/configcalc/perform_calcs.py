@@ -195,9 +195,12 @@ def replace_vars_by_values(
 
 def perform_calculations(
     config: dict[str, Any],
-    operand_parser: pp.ParserElement | None,
-    parse_float: type[float] | Callable[[str], Decimal],
+    context_variables: dict[str, Any] | None = None,
+    operand_parser: pp.ParserElement | None = None,
+    parse_float: type[float] | Callable[[str], Decimal] = float,
 ) -> dict[str, Any]:
+    if context_variables is None:
+        context_variables = {}
     if operand_parser is None:
         operand_parser = build_operand_parser(number_parser=regular_number_parser)
     parse_any_value = functools.partial(_parse_any_value, operand_parser=operand_parser)
@@ -208,7 +211,7 @@ def perform_calculations(
             parsed_formula=parsed_formula,
             data=config,
             formula_position=list(formula_position),
-            context_variables={"_input_parts": 25},
+            context_variables=context_variables,
             parse_any_value=parse_any_value,
         )
         calculated_value = calculate_formula_w_value(
@@ -227,6 +230,9 @@ if __name__ == "__main__":
 
     print(
         perform_calculations(
-            config=config, operand_parser=operand_parser, parse_float=Decimal
+            config=config,
+            context_variables={"_input_parts": 25},
+            operand_parser=operand_parser,
+            parse_float=Decimal,
         )
     )
