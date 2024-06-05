@@ -1,16 +1,27 @@
+from ast import parse
 import functools
 import math
 from collections.abc import Callable
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 import pyparsing as pp
 
 from configcalc.constants import MATH_CONSTANTS, MATH_FUNCTIONS, OPERATIONS
+from configcalc.dict_ops import get_deep, set_deep
+from configcalc.parsers import (
+    build_operand_parser,
+    decimal_parser,
+    regular_number_parser,
+)
+from configcalc.read_cfg_file import read_config_file
 from configcalc.typing import Number
 
 
 def find_formulas(dictionary: dict[str, Any]) -> dict[tuple[str, ...], str]:
+    """finds all formulas in a nested dictionary.
+    Returns a dictionary with a tuple of keys to access the value in the tree"""
     formulas = {}
     for key, value in dictionary.items():
         if isinstance(value, str) and value.startswith("="):
@@ -23,15 +34,22 @@ def find_formulas(dictionary: dict[str, Any]) -> dict[tuple[str, ...], str]:
 
 
 def find_var_ref_indices(parsed_lists: list[Any]) -> list[list[int]]:
+    """find positions as a list of indices of all variables in parsed lists from the parser"""
     base_elements_indices = []
     for i, element in enumerate(parsed_lists):
         # we have a var name
-        if isinstance(element, list) and isinstance(element[0], str) and element[0] not in MATH_FUNCTIONS:
+        if (
+            isinstance(element, list)
+            and isinstance(element[0], str)
+            and element[0] not in MATH_FUNCTIONS
+        ):
             # base_element = element[0]
             # print(element)
             base_elements_indices.append([i])
         elif isinstance(element, list):
-            base_elements_indices.extend([[i, *inner_indices] for inner_indices in find_var_ref_indices(element)])
+            base_elements_indices.extend(
+                [[i, *inner_indices] for inner_indices in find_var_ref_indices(element)]
+            )
     return base_elements_indices
 
 
@@ -43,6 +61,7 @@ def build_ref_levels(ref_position: list[str | int]) -> list[list[str | int]]:
 
 
 def get_value_in_data(data: dict[str, Any], list_identifier: list[str | int]) -> Any:
+    """get the value of a variable from its list identifier"""
     item = data
     for i_or_key in list_identifier:
         item = item[i_or_key]
@@ -50,12 +69,16 @@ def get_value_in_data(data: dict[str, Any], list_identifier: list[str | int]) ->
 
 
 def get_value_from_ref_list(
-    data: dict[str, Any], list_identifier: list[str | int], ref_levels: list[list[str | int]]
+    data: dict[str, Any],
+    list_identifier: list[str | int],
+    ref_levels: list[list[str | int]],
 ) -> Any:
     return_value = None
     for ref_level in ref_levels:
         try:
-            return_value = get_value_in_data(data=data, list_identifier=ref_level + list_identifier)
+            return_value = get_value_in_data(
+                data=data, list_identifier=ref_level + list_identifier
+            )
         except (KeyError, TypeError):
             continue
     return return_value
@@ -64,7 +87,9 @@ def get_value_from_ref_list(
 def find_inner_lists(parsed_lists: list[Any]) -> list[list[int] | None]:
     inner_lists_positions: list[list[int]] = []
 
-    def inner_list_seeker(search_list: list[Any], position: list[int]) -> list[int] | None:
+    def inner_list_seeker(
+        search_list: list[Any], position: list[int]
+    ) -> list[int] | None:
         found_list = False
         for i, element in enumerate(search_list):
             if isinstance(element, list):
@@ -77,7 +102,9 @@ def find_inner_lists(parsed_lists: list[Any]) -> list[list[int] | None]:
     return [position for position in inner_lists_positions if position is not None]
 
 
-def calc_result_update(result: Number | None, value: Number, operation: str | None = None) -> Number:
+def calc_result_update(
+    result: Number | None, value: Number, operation: str | None = None
+) -> Number:
     if result is None or operation is None:
         return value
     else:
@@ -88,7 +115,9 @@ def calc_math_func_result(function_name: "str", function_arg: Number):
     return getattr(math, function_name)(function_arg)
 
 
-def calculate_local(calc_list: list[Number | str]) -> Number:
+def calculate_local(
+    calc_list: list[Number | str], parse_float: type[float] | Callable[[str], Decimal]
+) -> Number:
     result = 0
     operator = "+"
     i = 0
@@ -98,7 +127,11 @@ def calculate_local(calc_list: list[Number | str]) -> Number:
             operator = operand_or_operator
         else:
             if operand_or_operator in MATH_FUNCTIONS:
-                operand = calc_math_func_result(function_name=operand_or_operator, function_arg=calc_list[i + 1])
+                operand = parse_float(
+                    calc_math_func_result(
+                        function_name=operand_or_operator, function_arg=calc_list[i + 1]
+                    )
+                )
                 i += 1
             else:
                 operand = operand_or_operator
@@ -108,20 +141,25 @@ def calculate_local(calc_list: list[Number | str]) -> Number:
     return result
 
 
-def calculate_formula_w_value(parsed_formula_w_value: list[Any]) -> Number:
+def calculate_formula_w_value(
+    parsed_formula_w_value: list[Any],
+    parse_float: type[float] | Callable[[str], Decimal],
+) -> Number:
     inner_lists = find_inner_lists(parsed_formula_w_value)
 
     while len(inner_lists) > 0:
         for inner_list in inner_lists:
             calc_list = get_deep(parsed_formula_w_value, inner_list)
-            local_result = calculate_local(calc_list=calc_list)
+            local_result = calculate_local(calc_list=calc_list, parse_float=parse_float)
             set_deep(parsed_formula_w_value, inner_list, local_result)
         inner_lists = find_inner_lists(parsed_formula_w_value)
 
     return parsed_formula_w_value[0]
 
 
-def _parse_any_value(value: str | Number, operand_parser: pp.ParserElement) -> list | Any:
+def _parse_any_value(
+    value: str | Number, operand_parser: pp.ParserElement
+) -> list[Any] | Any:
     if isinstance(value, str) and value.startswith("="):
         parsed_new_val = operand_parser.parse_string(value).asList()
     else:
@@ -146,14 +184,20 @@ def replace_vars_by_values(
                 parsed_new_val = context_variables[var_ref[0]]
             except (KeyError, TypeError):
                 ref_levels = build_ref_levels(formula_position)
-                var_new_val = get_value_from_ref_list(data, list_identifier=var_ref, ref_levels=ref_levels)
+                var_new_val = get_value_from_ref_list(
+                    data, list_identifier=var_ref, ref_levels=ref_levels
+                )
                 parsed_new_val = parse_any_value(var_new_val)
             set_deep(parsed_formula, var_ref_index, parsed_new_val)
 
     return parsed_formula
 
 
-def perform_calculations(config: dict[str, Any], operand_parser: pp.ParserElement | None):
+def perform_calculations(
+    config: dict[str, Any],
+    operand_parser: pp.ParserElement | None,
+    parse_float: type[float] | Callable[[str], Decimal],
+) -> dict[str, Any]:
     if operand_parser is None:
         operand_parser = build_operand_parser(number_parser=regular_number_parser)
     parse_any_value = functools.partial(_parse_any_value, operand_parser=operand_parser)
@@ -167,4 +211,22 @@ def perform_calculations(config: dict[str, Any], operand_parser: pp.ParserElemen
             context_variables={"_input_parts": 25},
             parse_any_value=parse_any_value,
         )
-        calculated_value = calculate_formula_w_value(parsed_formula_w_value)
+        calculated_value = calculate_formula_w_value(
+            parsed_formula_w_value, parse_float=parse_float
+        )
+        set_deep(
+            nested_list=config, indices=list(formula_position), value=calculated_value
+        )
+    return config
+
+
+if __name__ == "__main__":
+    config = read_config_file(Path(r"tests/assets/test.toml"), parse_float=Decimal)
+
+    operand_parser = build_operand_parser(number_parser=decimal_parser)
+
+    print(
+        perform_calculations(
+            config=config, operand_parser=operand_parser, parse_float=Decimal
+        )
+    )
