@@ -8,6 +8,7 @@ from configcalc.parsers import (
     build_operand_parser,
     decimal_parser,
     regular_number_parser,
+    number_formatters,
 )
 from configcalc.read_cfg_file import read_config_file
 
@@ -17,17 +18,11 @@ def config():
     return read_config_file(Path(r"tests/assets/test.toml"), parse_float=Decimal)
 
 
-@pytest.fixture
-def operand_parser():
-    return build_operand_parser(number_parser=decimal_parser)
-
-
-def test_perform_calculations(config, operand_parser):
+def test_perform_calculations(config):
     calculated_config = perform_calculations(
         config=config,
         context_variables={"_input_parts": 25},
-        operand_parser=operand_parser,
-        parse_float=Decimal,
+        number_formatter=number_formatters["decimal"],
     )
     should_be = {
         "title": "TOML Example",

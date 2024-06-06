@@ -11,6 +11,8 @@ import pyparsing as pp
 from configcalc.constants import MATH_CONSTANTS, MATH_FUNCTIONS, OPERATIONS
 from configcalc.dict_ops import get_deep, set_deep
 from configcalc.parsers import (
+    Formatter,
+    number_formatters,
     build_operand_parser,
     decimal_parser,
     regular_number_parser,
@@ -196,13 +198,11 @@ def replace_vars_by_values(
 def perform_calculations(
     config: dict[str, Any],
     context_variables: dict[str, Any] | None = None,
-    operand_parser: pp.ParserElement | None = None,
-    parse_float: type[float] | Callable[[str], Decimal] = float,
+    number_formatter: Formatter = number_formatters["float"],
 ) -> dict[str, Any]:
     if context_variables is None:
         context_variables = {}
-    if operand_parser is None:
-        operand_parser = build_operand_parser(number_parser=regular_number_parser)
+    operand_parser = build_operand_parser(number_parser=number_formatter.parser)
     parse_any_value = functools.partial(_parse_any_value, operand_parser=operand_parser)
     formulas = find_formulas(config)
     for formula_position, formula in list(formulas.items()):
@@ -215,7 +215,7 @@ def perform_calculations(
             parse_any_value=parse_any_value,
         )
         calculated_value = calculate_formula_w_value(
-            parsed_formula_w_value, parse_float=parse_float
+            parsed_formula_w_value, parse_float=number_formatter.formatter
         )
         set_deep(
             nested_list=config, indices=list(formula_position), value=calculated_value
@@ -226,13 +226,10 @@ def perform_calculations(
 if __name__ == "__main__":
     config = read_config_file(Path(r"tests/assets/test.toml"), parse_float=Decimal)
 
-    operand_parser = build_operand_parser(number_parser=decimal_parser)
-
     print(
         perform_calculations(
             config=config,
             context_variables={"_input_parts": 25},
-            operand_parser=operand_parser,
-            parse_float=Decimal,
+            number_formatter=number_formatters["decimal"],
         )
     )
