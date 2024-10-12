@@ -18,8 +18,13 @@ permissions:
   contents: read
 
 jobs:
-  prepare-environment:
+  deploy:
     runs-on: ubuntu-latest
+    # Specifying a GitHub environment is optional, but strongly encouraged
+    environment: release
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python
@@ -32,23 +37,9 @@ jobs:
         pip install build
         pip install pytest
         pip install .
-  test:
-    runs-on: ubuntu-latest
-    steps:
     - name: Test
       run: pytest
-  build:
-    runs-on: ubuntu-latest
-    steps:
     - name: Build package
       run: python -m build
-  pypi-publish:
-    runs-on: ubuntu-latest
-    # Specifying a GitHub environment is optional, but strongly encouraged
-    environment: release
-    permissions:
-      # IMPORTANT: this permission is mandatory for trusted publishing
-      id-token: write
-    steps:
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
