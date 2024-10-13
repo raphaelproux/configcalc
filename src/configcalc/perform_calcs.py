@@ -1,4 +1,3 @@
-from ast import parse
 import functools
 import math
 from collections.abc import Callable
@@ -8,14 +7,12 @@ from typing import Any
 
 import pyparsing as pp
 
-from configcalc.constants import MATH_CONSTANTS, MATH_FUNCTIONS, OPERATIONS
+from configcalc.constants import MATH_FUNCTIONS, OPERATIONS
 from configcalc.dict_ops import get_deep, set_deep
 from configcalc.parsers import (
     Formatter,
     number_formatters,
     build_operand_parser,
-    decimal_parser,
-    regular_number_parser,
 )
 from configcalc.read_cfg_file import read_config_file
 from configcalc.typing import Number
@@ -200,6 +197,16 @@ def perform_calculations(
     context_variables: dict[str, Any] | None = None,
     number_formatter: Formatter = number_formatters["float"],
 ) -> dict[str, Any]:
+    """resolves all possible calculations in config dictionary
+
+    Args:
+        config (dict[str, Any]): config dictionary as given by read_config_file
+        context_variables (dict[str, Any] | None, optional): additional variable values to use for calculations. Defaults to None.
+        number_formatter (Formatter, optional): number formater to use (e.g. decimal_parser). Defaults to number_formatters["float"].
+
+    Returns:
+        dict[str, Any]: config dictionary with all calculations resolved
+    """
     if context_variables is None:
         context_variables = {}
     operand_parser = build_operand_parser(number_parser=number_formatter.parser)

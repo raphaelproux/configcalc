@@ -1,0 +1,8 @@
+site_name: Configcalc
+
+theme:
+  name: "material"
+
+plugins:
+- search
+- mkdocstrings
