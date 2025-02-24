@@ -7,20 +7,30 @@ from typing import Any
 
 import pyparsing as pp
 
-from configcalc.constants import MATH_FUNCTIONS, OPERATIONS
-from configcalc.dict_ops import get_deep, set_deep
 from configcalc.parsers import (
-    Formatter,
     number_formatters,
     build_operand_parser,
 )
 from configcalc.read_cfg_file import read_config_file
-from configcalc.typing import Number
+from configcalc.utils import (
+    Number,
+    NumberType,
+    MATH_FUNCTIONS,
+    OPERATIONS,
+    get_deep,
+    set_deep,
+)
 
 
 def find_formulas(dictionary: dict[str, Any]) -> dict[tuple[str, ...], str]:
-    """finds all formulas in a nested dictionary.
-    Returns a dictionary with a tuple of keys to access the value in the tree"""
+    """finds all formulas in a nested dictionary
+
+    Args:
+        dictionary (dict[str, Any]): config dictionary
+
+    Returns:
+        dict[tuple[str, ...], str]: dictionary of formulas. Keys are a tuple of keys to access the value in the tree
+    """
     formulas = {}
     for key, value in dictionary.items():
         if isinstance(value, str) and value.startswith("="):
@@ -33,6 +43,14 @@ def find_formulas(dictionary: dict[str, Any]) -> dict[tuple[str, ...], str]:
 
 
 def find_var_ref_indices(parsed_lists: list[Any]) -> list[list[int]]:
+    """find positions of var values in parsed formulas from the parser as a list of indices of all variables
+
+    Args:
+        parsed_lists (list[Any]): parsed formula
+
+    Returns:
+        list[list[int]]: _description_
+    """
     """find positions as a list of indices of all variables in parsed lists from the parser"""
     base_elements_indices = []
     for i, element in enumerate(parsed_lists):
@@ -195,21 +213,23 @@ def replace_vars_by_values(
 def perform_calculations(
     config: dict[str, Any],
     context_variables: dict[str, Any] | None = None,
-    number_formatter: Formatter = number_formatters["float"],
+    number_type: NumberType = NumberType.FLOAT,
 ) -> dict[str, Any]:
     """resolves all possible calculations in config dictionary
 
     Args:
         config (dict[str, Any]): config dictionary as given by read_config_file
         context_variables (dict[str, Any] | None, optional): additional variable values to use for calculations. Defaults to None.
-        number_formatter (Formatter, optional): number formater to use (e.g. decimal_parser). Defaults to number_formatters["float"].
+        number_type (NumberType, optional): number type to use (e.g. NumberType.DECIMAL). Defaults to FLOAT.
 
     Returns:
         dict[str, Any]: config dictionary with all calculations resolved
     """
+
     if context_variables is None:
         context_variables = {}
-    operand_parser = build_operand_parser(number_parser=number_formatter.parser)
+    number_parser_element, number_parser_function = number_formatters[number_type]
+    operand_parser = build_operand_parser(number_parser=number_parser_element)
     parse_any_value = functools.partial(_parse_any_value, operand_parser=operand_parser)
     formulas = find_formulas(config)
     for formula_position, formula in list(formulas.items()):
@@ -222,7 +242,7 @@ def perform_calculations(
             parse_any_value=parse_any_value,
         )
         calculated_value = calculate_formula_w_value(
-            parsed_formula_w_value, parse_float=number_formatter.formatter
+            parsed_formula_w_value, parse_float=number_parser_function
         )
         set_deep(
             nested_list=config, indices=list(formula_position), value=calculated_value

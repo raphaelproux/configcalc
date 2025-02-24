@@ -1,18 +1,9 @@
 from collections.abc import Callable
-from dataclasses import dataclass
 from decimal import Decimal
 
 import pyparsing as pp
 
-from configcalc.typing import Number
-
-
-@dataclass
-class Formatter:
-    """Associates a formatter function like Decimal or float and a parser function which returns a ParserElement from pyparsing"""
-
-    formatter: Callable[[str | Number], Number]
-    parser: Callable[[], pp.ParserElement]
+from configcalc.utils import NumberType
 
 
 def decimal_parser() -> pp.ParserElement:
@@ -45,8 +36,8 @@ def regular_number_parser() -> pp.ParserElement:
 
 
 number_formatters = {
-    "decimal": Formatter(formatter=Decimal, parser=decimal_parser),
-    "float": Formatter(formatter=float, parser=regular_number_parser),
+    NumberType.DECIMAL: (decimal_parser, Decimal),
+    NumberType.FLOAT: (regular_number_parser, float),
 }
 
 

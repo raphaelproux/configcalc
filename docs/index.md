@@ -1,17 +1,15 @@
-# Welcome to MkDocs
+# Configcalc
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+Configcalc is a library to handle TOML configuration files with formulas. Formulas can make simple operations between variables contained in other parts of the configuration or given by the user at runtime. 
 
-## Commands
+# Usage
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
-
-## Project layout
-
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+```python
+import configcalc as cc
+config1 = cc.read_config_file(Path(r"path/to/config_file1.toml"))
+config2 = cc.read_config_file(Path(r"path/to/config_file2.toml"))
+merged_config = cc.merge_configs(config1, config2)
+calculated_config = cc.perform_calculations(
+        config=config,
+    )
+```
