@@ -1,19 +1,18 @@
 from collections.abc import Callable
-from dataclasses import dataclass
 from decimal import Decimal
 
 import pyparsing as pp
 
-from configcalc.typing import Number
-
-
-@dataclass
-class Formatter:
-    formatter: Callable[[str | Number], Number]
-    parser: Callable[[], pp.ParserElement]
+from configcalc.utils import NumberType
 
 
 def decimal_parser() -> pp.ParserElement:
+    """Parse numbers as Decimal
+
+    Returns:
+        pp.ParserElement: Decimal ParserElement for pyparsing
+    """
+
     def convert_to_decimal(token: pp.ParseResults) -> Decimal:
         return Decimal(str(token[0]))
 
@@ -28,16 +27,27 @@ def decimal_parser() -> pp.ParserElement:
 
 
 def regular_number_parser() -> pp.ParserElement:
+    """Parse numbers as default from pyparsing
+
+    Returns:
+        pp.ParserElement: Common number ParserElement for pyparsing
+    """
     return pp.common.number
 
 
 number_formatters = {
-    "decimal": Formatter(formatter=Decimal, parser=decimal_parser),
-    "float": Formatter(formatter=float, parser=regular_number_parser),
+    NumberType.DECIMAL: (decimal_parser, Decimal),
+    NumberType.FLOAT: (regular_number_parser, float),
 }
 
 
 def var_name_parser() -> pp.ParserElement:
+    """Parse a variable number composed of a base name and a tree like structure
+    using dots (.) or a list like structure using square brackets ([]), or a combination of both.
+
+    Returns:
+        pp.ParserElement: var name ParserElement for pyparsing
+    """
     dict_like_key = pp.Suppress(".") + pp.common.identifier
     list_like_index = pp.Suppress("[") + pp.common.integer + pp.Suppress("]")
     subvar_element = dict_like_key ^ list_like_index
@@ -47,6 +57,14 @@ def var_name_parser() -> pp.ParserElement:
 def operator_operand_expr(
     number_parser: Callable[[], pp.ParserElement],
 ) -> pp.ParserElement:
+    """Parse an operator operand with priority. In order (most priority to least) the minus sign (-), exponent (^), multiply/divide (* /) and add/substract (+ -)
+
+    Args:
+        number_parser (Callable[[], pp.ParserElement]): number parser like decimal_parser or regular_number_parser
+
+    Returns:
+        pp.ParserElement: operand parser for pyparsing
+    """
     operator_operand = pp.Forward()
     number = number_parser()
     var_name = var_name_parser()
@@ -70,5 +88,13 @@ def operator_operand_expr(
 def build_operand_parser(
     number_parser: Callable[[], pp.ParserElement],
 ) -> pp.ParserElement:
+    """Builds the operand parser by removing the = sign at the beginning of the formula
+
+    Args:
+        number_parser (Callable[[], pp.ParserElement]): number parser like decimal_parser or regular_number_parser
+
+    Returns:
+        pp.ParserElement: full formula parser for pyparsing
+    """
     operator_operand = operator_operand_expr(number_parser)
     return pp.Suppress("=") + operator_operand

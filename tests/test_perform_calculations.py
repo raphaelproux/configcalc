@@ -4,12 +4,7 @@ from pathlib import Path
 from configcalc import perform_calculations
 import pytest
 
-from configcalc.parsers import (
-    build_operand_parser,
-    decimal_parser,
-    regular_number_parser,
-    number_formatters,
-)
+from configcalc.utils import NumberType
 from configcalc.read_cfg_file import read_config_file
 
 
@@ -22,7 +17,7 @@ def test_perform_calculations(config):
     calculated_config = perform_calculations(
         config=config,
         context_variables={"_input_parts": 25},
-        number_formatter=number_formatters["decimal"],
+        number_type=NumberType.DECIMAL,
     )
     should_be = {
         "title": "TOML Example",
