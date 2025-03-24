@@ -1,7 +1,7 @@
 [project]
 name = "configcalc"
-version = "0.1.2"
-description = "The purpose is to offer config files functionality with calculations that can be specified"
+version = "0.1.3"
+description = "TOML config files which can be merged and have calculated values."
 readme = "README.md"
 authors = [
     { name = "Raphael Proux", email = "raphaelproux@gmail.com" }
