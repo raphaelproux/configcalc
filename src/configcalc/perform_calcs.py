@@ -7,9 +7,9 @@ from typing import Any
 
 import pyparsing as pp
 
-from configcalc.parsers import (
-    number_formatters,
-    build_operand_parser,
+from configcalc.parser_elements import (
+    number_parser_elements,
+    build_operand_parser_element,
 )
 from configcalc.read_cfg_file import read_config_file
 from configcalc.utils import (
@@ -228,8 +228,10 @@ def perform_calculations(
 
     if context_variables is None:
         context_variables = {}
-    number_parser_element, number_parser_function = number_formatters[number_type]
-    operand_parser = build_operand_parser(number_parser=number_parser_element)
+    number_parser_element, number_parser_function = number_parser_elements[number_type]
+    operand_parser = build_operand_parser_element(
+        number_parser_element=number_parser_element
+    )
     parse_any_value = functools.partial(_parse_any_value, operand_parser=operand_parser)
     formulas = find_formulas(config)
     for formula_position, formula in list(formulas.items()):
@@ -257,6 +259,6 @@ if __name__ == "__main__":
         perform_calculations(
             config=config,
             context_variables={"_input_parts": 25},
-            number_formatter=number_formatters["decimal"],
+            number_formatter=number_parser_elements["decimal"],
         )
     )

@@ -1,7 +1,7 @@
 # configcalc
 
 [![PyPI - Version](https://img.shields.io/pypi/v/configcalc.svg)](https://pypi.org/project/configcalc)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/configcalc.svg)](https://pypi.org/project/configcalc)
+<!-- [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/configcalc.svg)](https://pypi.org/project/configcalc) -->
 
 -----
 
